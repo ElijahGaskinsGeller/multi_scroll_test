@@ -1,0 +1,25 @@
+body {
+        margin: 0;
+        width: 500vw;
+        height: 500vh;
+
+        /*overflow: hidden;*/
+}
+
+.scrollX {
+
+        overflow-x: scroll !important;
+
+}
+
+.scrollY {
+
+        overflow-y: scroll !important;
+
+}
+
+canvas {
+        overflow: clip;
+        position: fixed;
+        overflow-clip-margin: content-box;
+}

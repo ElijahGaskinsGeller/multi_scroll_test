@@ -1,0 +1,19 @@
+{
+  "name": "threejs_boilerplate",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "server": "npx vite",
+    "build": "npx vite build"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "three": "^0.167.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.2"
+  }
+}
