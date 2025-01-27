@@ -19,6 +19,13 @@ function inverseLerp(start, end, amt) {
 	return (amt - start) / (end - start);
 }
 
+function withinRange(min, max, number) {
+
+	let result = (number >= min) && (number <= max)
+	return result;
+
+}
+
 function ScrollToWorldspace(scrollX, scrollY, boundingBox) {
 
 	let result = new THREE.Vector2();
@@ -54,18 +61,18 @@ function CreateLine(p0, p1, name) {
 
 	let result = {
 
-		p0: new THREE.Vector2(p0.position.x, -p0.position.z),
-		p1: new THREE.Vector2(p1.position.x, -p1.position.z),
+		p0: new THREE.Vector2(p0.x, -p0.z),
+		p1: new THREE.Vector2(p1.x, -p1.z),
 		name: name,
 		type: LINE_TYPES.UNKNOWN
 
 	}
 
-	if (p0.position.x == p1.position.x) {
+	if (p0.x == p1.x) {
 		result.type = LINE_TYPES.V;
 	}
 
-	if (p0.position.z == p1.position.z) {
+	if (p0.z == p1.z) {
 		if (result.type === LINE_TYPES.V) {
 			console.error("POINTS 0 AND 1 ARE THE SAME FOR LINE: " + name);
 			console.log("point 0: ");
@@ -89,22 +96,88 @@ function CreateLine(p0, p1, name) {
 }
 
 
-function PointIsOnLine(p, line) {
+//NOTE: assuming lines are axis aligned
+function PointIsOnLine(_p, _line, padding) {
 
-	//console.log(line);
-	let lineLength = line.p0.distanceTo(line.p1);
-	let distanceToP0 = p.distanceTo(line.p0);
-	let distanceToP1 = p.distanceTo(line.p1);
+	let result = false;
 
-	let result = (lineLength === (distanceToP1 + distanceToP0));
+	//console.log(_line.name);
+	//console.log(_p);
+	//console.log(_line);
+	//console.log(padding);
 
-	//console.log("len: " + lineLength);
-	//console.log("distace 0: " + distanceToP0);
-	//console.log("distance 1: " + distanceToP1);
-	//console.log("is distance same: " + result);
+	if (_line.type === LINE_TYPES.H) {
+
+		let withinRangeX = (_line.p0.x < _line.p1.x) ?
+			withinRange(_line.p0.x, _line.p1.x, _p.x) :
+			withinRange(_line.p1.x, _line.p0.x, _p.x);
+		let withinRangeY = withinRange(_line.p0.y - padding, _line.p0.y + padding, _p.y);
+
+		//console.log("wr x: " + withinRangeX);
+		//console.log("wr y: " + withinRangeY);
+
+		result = withinRangeX && withinRangeY;
+
+
+	} else if (_line.type === LINE_TYPES.V) {
+
+
+		let withinRangeY = (_line.p0.y < _line.p1.y) ?
+			withinRange(_line.p0.y, _line.p1.y, _p.y) :
+			withinRange(_line.p1.y, _line.p0.y, _p.y);
+		let withinRangeX = withinRange(_line.p0.x - padding, _line.p0.x + padding, _p.x);
+
+		//console.log("wr x: " + withinRangeX);
+		//console.log("wr y: " + withinRangeY);
+
+		result = withinRangeX && withinRangeY;
+
+	} else {
+
+		console.error("invalid line type with line: " + _line.name);
+
+	}
+
+	//console.log("result: " + result);
 
 	return result;
 
+
+	////TODO:  these are on cardinal axies.  just check to see if x is within range of horizontal lines or y is in range of vertical lines
+	//
+	//let p = new THREE.Vector2(_p.x, _p.y);
+	////console.log(p);
+	//let line = CreateLine(new THREE.Vector3(_line.p0.x, 0, -_line.p0.y),
+	//	new THREE.Vector3(_line.p1.x, 0, -_line.p1.y), _line.name);
+	//
+	//
+	//if (round !== undefined) {
+	//
+	//	p.x = Number.parseFloat(p.x.toFixed(round));
+	//	p.y = Number.parseFloat(p.y.toFixed(round));
+	//
+	//
+	//	line.p0.x = Number.parseFloat(line.p0.x.toFixed(round));
+	//	line.p0.y = Number.parseFloat(line.p0.y.toFixed(round));
+	//	line.p1.x = Number.parseFloat(line.p1.x.toFixed(round));
+	//	line.p1.y = Number.parseFloat(line.p1.y.toFixed(round));
+	//
+	//	//console.log(round);
+	//	//console.log(p);
+	//	//console.log(line);
+	//
+	//}
+	//
+	////console.log(line);
+	//let lineLength = line.p0.distanceTo(line.p1);
+	//let distanceToP0 = p.distanceTo(line.p0);
+	//let distanceToP1 = p.distanceTo(line.p1);
+	//
+	//let result = (lineLength === (distanceToP1 + distanceToP0));
+	//
+	//
+	//return result;
+	//
 }
 
 
@@ -151,6 +224,7 @@ let gltfLoader = new GLTFLoader();
 let panelPoints = {};
 let panelLines = {};
 let sceneBoundingBox = null;
+//let currentLine = null;
 
 let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(object) {
 
@@ -167,8 +241,10 @@ let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(
 
 			let name = currentChild.name;
 			name = name.replace("point", "").replaceAll("_", "");
+			let currentPosition = new THREE.Vector3();
+			currentChild.getWorldPosition(currentPosition);
 
-			panelPoints[name] = currentChild;
+			panelPoints[name] = currentPosition;
 
 
 		} else {
@@ -180,9 +256,9 @@ let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(
 	}
 
 	console.log(panelPoints);
-	let startingPosition = new THREE.Vector3();
+	let startingPosition = panelPoints["a0"];
 
-	panelPoints["a0"].getWorldPosition(startingPosition);
+	//panelPoints["a0"].getWorldPosition(startingPosition);
 	console.log(startingPosition);
 
 
@@ -193,6 +269,7 @@ let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(
 	panelLines["l"] = CreateLine(panelPoints["b0"], panelPoints["c0"], "l");
 	panelLines["r"] = CreateLine(panelPoints["b1"], panelPoints["c1"], "r");
 
+	//currentLine = panelLines["a"];
 
 	console.log(panelLines);
 
@@ -201,6 +278,8 @@ let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(
 	//NOTE: camera y = point -z
 	camera.position.y = -startingPosition.z;
 
+	console.log(camera.position);
+	console.log(startingPosition);
 
 	scene.add(object.scene);
 	scene.rotation.x = Math.PI / 2;
@@ -277,8 +356,6 @@ function animate() {
 
 	if (sceneBoundingBox !== null) {
 		let newCameraPosition = ScrollToWorldspace(scrollX, scrollY, sceneBoundingBox);
-		//camera.position.x = lerp(sceneBoundingBox.min.x, sceneBoundingBox.max.x, scrollX);
-		//camera.position.y = lerp(sceneBoundingBox.max.y, sceneBoundingBox.min.y, scrollY);
 
 		camera.position.x = newCameraPosition.x;
 		camera.position.y = newCameraPosition.y;
@@ -297,10 +374,16 @@ function animate() {
 
 		let currentLine = panelLineKeys[i];
 
-		if (PointIsOnLine(Camera2DPosition(camera), panelLines[currentLine])) {
+		if (PointIsOnLine(Camera2DPosition(camera), panelLines[currentLine], .05)) {
 
-			//console.log(currentLine);
+			console.log(currentLine);
 
+
+		} else {
+
+			//console.log("current line: " + panelLineKeys[i]);
+			//console.log(Camera2DPosition(camera));
+			//console.log(panelLines[currentLine]);
 
 		}
 
