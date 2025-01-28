@@ -101,20 +101,14 @@ function PointIsOnLine(_p, _line, padding) {
 
 	let result = false;
 
-	//console.log(_line.name);
-	//console.log(_p);
-	//console.log(_line);
-	//console.log(padding);
 
 	if (_line.type === LINE_TYPES.H) {
 
 		let withinRangeX = (_line.p0.x < _line.p1.x) ?
-			withinRange(_line.p0.x, _line.p1.x, _p.x) :
-			withinRange(_line.p1.x, _line.p0.x, _p.x);
+			withinRange(_line.p0.x - padding, _line.p1.x + padding, _p.x) :
+			withinRange(_line.p1.x - padding, _line.p0.x + padding, _p.x);
 		let withinRangeY = withinRange(_line.p0.y - padding, _line.p0.y + padding, _p.y);
 
-		//console.log("wr x: " + withinRangeX);
-		//console.log("wr y: " + withinRangeY);
 
 		result = withinRangeX && withinRangeY;
 
@@ -123,8 +117,8 @@ function PointIsOnLine(_p, _line, padding) {
 
 
 		let withinRangeY = (_line.p0.y < _line.p1.y) ?
-			withinRange(_line.p0.y, _line.p1.y, _p.y) :
-			withinRange(_line.p1.y, _line.p0.y, _p.y);
+			withinRange(_line.p0.y - padding, _line.p1.y + padding, _p.y) :
+			withinRange(_line.p1.y - padding, _line.p0.y + padding, _p.y);
 		let withinRangeX = withinRange(_line.p0.x - padding, _line.p0.x + padding, _p.x);
 
 		//console.log("wr x: " + withinRangeX);
@@ -370,13 +364,30 @@ function animate() {
 
 
 	let panelLineKeys = Object.keys(panelLines);
+	let vertical = false;
+	let horizontal = false;
+
 	for (let i = 0; i < panelLineKeys.length; i++) {
 
-		let currentLine = panelLineKeys[i];
+		let currentLineKey = panelLineKeys[i];
+		let currentLine = panelLines[currentLineKey];
 
-		if (PointIsOnLine(Camera2DPosition(camera), panelLines[currentLine], .05)) {
+		if (PointIsOnLine(Camera2DPosition(camera), currentLine, .05)) {
 
-			console.log(currentLine);
+			if (currentLine.type === LINE_TYPES.V) {
+
+				vertical = true;
+
+			} else if (currentLine.type === LINE_TYPES.H) {
+
+				horizontal = true;
+
+			} else {
+
+				console.error("invalid line: " + currentLine.name);
+				console.log(currentLine);
+
+			}
 
 
 		} else {
@@ -386,6 +397,30 @@ function animate() {
 			//console.log(panelLines[currentLine]);
 
 		}
+
+	}
+
+	if (vertical) {
+
+		if (!document.body.classList.contains("scrollY")) {
+			document.body.classList.add("scrollY");
+		}
+
+	} else {
+
+		document.body.classList.remove("scrollY");
+
+	}
+
+	if (horizontal) {
+
+		if (!document.body.classList.contains("scrollX")) {
+			document.body.classList.add("scrollX");
+		}
+
+	} else {
+
+		document.body.classList.remove("scrollX");
 
 	}
 
