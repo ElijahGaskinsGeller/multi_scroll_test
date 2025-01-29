@@ -136,42 +136,6 @@ function PointIsOnLine(_p, _line, padding) {
 
 	return result;
 
-
-	////TODO:  these are on cardinal axies.  just check to see if x is within range of horizontal lines or y is in range of vertical lines
-	//
-	//let p = new THREE.Vector2(_p.x, _p.y);
-	////console.log(p);
-	//let line = CreateLine(new THREE.Vector3(_line.p0.x, 0, -_line.p0.y),
-	//	new THREE.Vector3(_line.p1.x, 0, -_line.p1.y), _line.name);
-	//
-	//
-	//if (round !== undefined) {
-	//
-	//	p.x = Number.parseFloat(p.x.toFixed(round));
-	//	p.y = Number.parseFloat(p.y.toFixed(round));
-	//
-	//
-	//	line.p0.x = Number.parseFloat(line.p0.x.toFixed(round));
-	//	line.p0.y = Number.parseFloat(line.p0.y.toFixed(round));
-	//	line.p1.x = Number.parseFloat(line.p1.x.toFixed(round));
-	//	line.p1.y = Number.parseFloat(line.p1.y.toFixed(round));
-	//
-	//	//console.log(round);
-	//	//console.log(p);
-	//	//console.log(line);
-	//
-	//}
-	//
-	////console.log(line);
-	//let lineLength = line.p0.distanceTo(line.p1);
-	//let distanceToP0 = p.distanceTo(line.p0);
-	//let distanceToP1 = p.distanceTo(line.p1);
-	//
-	//let result = (lineLength === (distanceToP1 + distanceToP0));
-	//
-	//
-	//return result;
-	//
 }
 
 
@@ -190,7 +154,7 @@ let scene = new THREE.Scene();
 
 
 //let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let cameraZoom = 2;
+let cameraZoom = 3;
 let frustumSize = cameraZoom * (window.innerHeight / window.innerWidth);
 let aspect = window.innerWidth / window.innerHeight;
 let camera = new THREE.OrthographicCamera(frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 0.1, 2000);
@@ -205,12 +169,8 @@ document.body.appendChild(renderer.domElement);
 
 
 
-let geometry = new THREE.BoxGeometry(1, 1, 1);
 let material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-let cube = new THREE.Mesh(geometry, material);
-//scene.add(cube);
 
-let loadCountdown = 10;
 
 
 let gltfLoader = new GLTFLoader();
@@ -218,7 +178,6 @@ let gltfLoader = new GLTFLoader();
 let panelPoints = {};
 let panelLines = {};
 let sceneBoundingBox = null;
-//let currentLine = null;
 
 let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(object) {
 
@@ -291,6 +250,9 @@ let panels = gltfLoader.load("./models/multi_scroll_test__layout.glb", function(
 
 
 	let scrollPos = WorldspaceToScroll(camera.position.x, camera.position.y, sceneBoundingBox);
+	previousScrollX = scrollPos.x;
+	previousScrollY = scrollPos.y;
+
 	window.scrollTo(scrollPos.x, scrollPos.y);
 
 });
@@ -319,6 +281,9 @@ function OnWindowResize(e) {
 
 }
 
+let previousScrollX = 0;
+let previousScrollY = 0;
+
 function OnWindowScroll(e) {
 
 	/*TODO:
@@ -333,6 +298,70 @@ function OnWindowScroll(e) {
 	 * 2) if on horizontal path, check for overlap with vertical paths 
 	 * 3) if current location intersects with another path, add propper scroll class
 	 */
+
+
+	let scrollX = window.scrollX / (document.body.scrollWidth - window.innerWidth);
+	scrollX = clamp(scrollX, 0, 1);
+
+	let scrollY = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+	scrollY = clamp(scrollY, 0, 1);
+
+	if (sceneBoundingBox !== null) {
+
+		let newCameraPosition = ScrollToWorldspace(scrollX, scrollY, sceneBoundingBox);
+
+		camera.position.x = newCameraPosition.x;
+		camera.position.y = newCameraPosition.y;
+
+	}
+
+	let panelLineKeys = Object.keys(panelLines);
+	let vertical = false;
+	let horizontal = false;
+
+	for (let i = 0; i < panelLineKeys.length; i++) {
+
+		let currentLineKey = panelLineKeys[i];
+		let currentLine = panelLines[currentLineKey];
+
+		if (PointIsOnLine(Camera2DPosition(camera), currentLine, .5)) {
+
+			if (currentLine.type === LINE_TYPES.V) {
+
+				vertical = true;
+
+			} else if (currentLine.type === LINE_TYPES.H) {
+
+				horizontal = true;
+
+			} else {
+
+				console.error("invalid line: " + currentLine.name);
+				console.log(currentLine);
+
+			}
+
+
+		} else {
+
+
+		}
+
+	}
+
+
+	if (vertical || horizontal) {
+
+		previousScrollX = window.scrollX;
+		previousScrollY = window.scrollY;
+
+	} else {
+
+		window.scrollTo(previousScrollX, previousScrollY);
+
+	}
+
+
 
 }
 
@@ -372,7 +401,7 @@ function animate() {
 		let currentLineKey = panelLineKeys[i];
 		let currentLine = panelLines[currentLineKey];
 
-		if (PointIsOnLine(Camera2DPosition(camera), currentLine, .05)) {
+		if (PointIsOnLine(Camera2DPosition(camera), currentLine, .5)) {
 
 			if (currentLine.type === LINE_TYPES.V) {
 
