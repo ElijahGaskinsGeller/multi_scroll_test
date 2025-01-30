@@ -121,8 +121,6 @@ function PointIsOnLine(_p, _line, padding) {
 			withinRange(_line.p1.y - padding, _line.p0.y + padding, _p.y);
 		let withinRangeX = withinRange(_line.p0.x - padding, _line.p0.x + padding, _p.x);
 
-		//console.log("wr x: " + withinRangeX);
-		//console.log("wr y: " + withinRangeY);
 
 		result = withinRangeX && withinRangeY;
 
@@ -279,12 +277,19 @@ function OnWindowResize(e) {
 
 	renderer.setSize(window.innerWidth, window.innerHeight);
 
+
+
+
+
 }
 
+let previousScrollPercentX = 0;
+let previousScrollPercentY = 0;
 let previousScrollX = 0;
 let previousScrollY = 0;
 
 function OnWindowScroll(e) {
+
 
 	/*TODO:
 	 * 0) make sure we're on a path
@@ -316,8 +321,8 @@ function OnWindowScroll(e) {
 	}
 
 	let panelLineKeys = Object.keys(panelLines);
-	let vertical = false;
-	let horizontal = false;
+	let vertical = null;
+	let horizontal = null;
 
 	for (let i = 0; i < panelLineKeys.length; i++) {
 
@@ -327,12 +332,18 @@ function OnWindowScroll(e) {
 		if (PointIsOnLine(Camera2DPosition(camera), currentLine, .5)) {
 
 			if (currentLine.type === LINE_TYPES.V) {
+				if (vertical !== null) {
+					console.error("double vertical");
+				}
 
-				vertical = true;
+				vertical = currentLine;
 
 			} else if (currentLine.type === LINE_TYPES.H) {
+				if (horizontal !== null) {
+					console.error("double horizontal");
+				}
 
-				horizontal = true;
+				horizontal = currentLine;
 
 			} else {
 
@@ -350,10 +361,33 @@ function OnWindowScroll(e) {
 	}
 
 
-	if (vertical || horizontal) {
+	if (vertical !== null || horizontal !== null) {
+
+		let deltaScrollX = previousScrollX - window.scrollX;
+		let deltaScrollY = previousScrollY - window.scrollY;
 
 		previousScrollX = window.scrollX;
 		previousScrollY = window.scrollY;
+
+		if (deltaScrollX !== 0) {
+
+			if (horizontal !== null) {
+				let targetScrollPos = WorldspaceToScroll(camera.position.x, horizontal.p0.y, sceneBoundingBox);
+				window.scrollTo(targetScrollPos.x, targetScrollPos.y);
+			}
+
+		}
+
+
+		if (deltaScrollY !== 0) {
+
+			if (vertical !== null) {
+				let targetScrollPos = WorldspaceToScroll(vertical.p0.x, camera.position.y, sceneBoundingBox);
+				window.scrollTo(targetScrollPos.x, targetScrollPos.y);
+			}
+
+		}
+
 
 	} else {
 
